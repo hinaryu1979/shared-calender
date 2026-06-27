@@ -71,3 +71,38 @@ export async function deleteCalendarEvent(calendarId: string, token: string, eve
   const data = await parseJson<{ error?: string; message?: string }>(res);
   if (!res.ok) throw new Error(data.message ?? data.error ?? res.statusText);
 }
+
+export type ExportSheetsParams = {
+  startDate: string;
+  endDate: string;
+  fileName?: string;
+};
+
+export type ExportSheetsResult = {
+  url: string;
+  fileName: string;
+};
+
+export async function exportCalendarToSheets(
+  calendarId: string,
+  token: string,
+  params: ExportSheetsParams,
+): Promise<ExportSheetsResult> {
+  const res = await fetch(`/api/calendars/${encodeURIComponent(calendarId)}/export`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      format: "sheets",
+      startDate: params.startDate,
+      endDate: params.endDate,
+      fileName: params.fileName,
+    }),
+  });
+  const data = await parseJson<ExportSheetsResult & { error?: string; message?: string }>(res);
+  if (!res.ok) throw new Error(data.message ?? data.error ?? res.statusText);
+  if (!data.url) throw new Error("invalid_response");
+  return { url: data.url, fileName: data.fileName };
+}

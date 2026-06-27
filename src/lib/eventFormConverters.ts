@@ -17,6 +17,19 @@ export function payloadToFormInitialTimed(start: Date, end: Date): EventFormPayl
   };
 }
 
+/** 日付セルクリック時: 開始日=終了日=クリック日、時刻・タイトル・メモは空 */
+export function payloadToFormInitialDateClick(date: Date): EventFormPayload {
+  const d = formatDateLocal(date);
+  return {
+    title: "",
+    allDay: true,
+    start: d,
+    end: d,
+    visibility: "public",
+    memo: "",
+  };
+}
+
 export function payloadToFormInitialAllDay(startInclusive: Date, endExclusive: Date): EventFormPayload {
   const s = formatDateLocal(startInclusive);
   const endInclusive = addLocalDays(endExclusive, -1);

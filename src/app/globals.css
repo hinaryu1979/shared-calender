@@ -65,9 +65,38 @@ body {
 
 .fc .fc-event {
   border-radius: 0.25rem;
-  border: none;
-  background-color: #1a73e8;
+  border: 1px solid #bae6fd;
+  background-color: #e0f2fe;
+  color: #0c4a6e;
   font-size: 0.75rem;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.fc .fc-event:hover {
+  background-color: #d9f1ff;
+  border-color: #7dd3fc;
+}
+
+.fc .fc-event.fc-event-selected,
+.fc .fc-event:focus {
+  background-color: #bae6fd;
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.45);
+  color: #0c4a6e;
+}
+
+.fc .fc-event .fc-event-main {
+  color: inherit;
+}
+
+.fc .fc-event .fc-event-time {
+  color: #075985;
+  font-weight: 500;
+}
+
+.fc .fc-event .fc-event-title {
+  color: inherit;
+  font-weight: 500;
 }
 
 .fc .fc-scrollgrid {

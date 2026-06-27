@@ -6,8 +6,14 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import jaLocale from "@fullcalendar/core/locales/ja";
-import type { DateSelectArg, DateSpanApi, EventClickArg, EventDropArg } from "@fullcalendar/core";
-import type { EventResizeDoneArg } from "@fullcalendar/interaction";
+import type {
+  DateSelectArg,
+  DateSpanApi,
+  EventClickArg,
+  EventContentArg,
+  EventDropArg,
+} from "@fullcalendar/core";
+import type { DateClickArg, EventResizeDoneArg } from "@fullcalendar/interaction";
 import {
   createCalendarEvent,
   deleteCalendarEvent,
@@ -18,10 +24,12 @@ import { MIN_EVENT_DATE } from "@/lib/calendarConstants";
 import type { CalendarEventRecord } from "@/lib/calendarEventTypes";
 import { toEventInput } from "@/lib/calendarEventTypes";
 import { EventFormDialog } from "@/components/EventFormDialog";
+import { ExportPanel } from "@/components/ExportPanel";
 import { eventApiToRecord } from "@/lib/eventApiBridge";
 import {
   formPayloadToFcStrings,
   payloadToFormInitialAllDay,
+  payloadToFormInitialDateClick,
   payloadToFormInitialTimed,
   recordToFormInitial,
 } from "@/lib/eventFormConverters";
@@ -101,6 +109,7 @@ export default function AppCalendar() {
   const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dialogInitial, setDialogInitial] = useState<EventFormPayload>(() => defaultCreatePayload());
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const initialDateStr = useMemo(() => {
     const t = new Date();
@@ -133,12 +142,26 @@ export default function AppCalendar() {
   const closeDialog = useCallback(() => {
     setDialogOpen(false);
     setEditingId(null);
+    setSelectedEventId(null);
   }, []);
 
   const openCreateBlank = useCallback(() => {
+    setSelectedEventId(null);
     setDialogMode("create");
     setEditingId(null);
     setDialogInitial(defaultCreatePayload());
+    setDialogOpen(true);
+  }, []);
+
+  const handleDateClick = useCallback((info: DateClickArg) => {
+    if (info.date < MIN_EVENT_START) {
+      window.alert(`選択の開始は ${MIN_EVENT_DATE} 以降にしてください。`);
+      return;
+    }
+    setSelectedEventId(null);
+    setDialogMode("create");
+    setEditingId(null);
+    setDialogInitial(payloadToFormInitialDateClick(info.date));
     setDialogOpen(true);
   }, []);
 
@@ -148,6 +171,7 @@ export default function AppCalendar() {
       window.alert(`選択の開始は ${MIN_EVENT_DATE} 以降にしてください。`);
       return;
     }
+    setSelectedEventId(null);
     setDialogMode("create");
     setEditingId(null);
     if (info.allDay) {
@@ -158,11 +182,17 @@ export default function AppCalendar() {
     setDialogOpen(true);
   }, []);
 
+  const eventClassNames = useCallback(
+    (arg: EventContentArg) => (selectedEventId && arg.event.id === selectedEventId ? ["fc-event-selected"] : []),
+    [selectedEventId],
+  );
+
   const handleEventClick = useCallback(
     (info: EventClickArg) => {
       info.jsEvent.preventDefault();
       const r = events.find((e) => e.id === String(info.event.id));
       if (!r) return;
+      setSelectedEventId(r.id);
       setDialogMode("edit");
       setEditingId(r.id);
       setDialogInitial(recordToFormInitial(r));
@@ -328,9 +358,11 @@ export default function AppCalendar() {
             meridiem: "short",
           }}
           events={fcEvents}
+          eventClassNames={eventClassNames}
           dayMaxEventRows={3}
           selectable
           selectMirror
+          dateClick={handleDateClick}
           select={handleSelect}
           selectAllow={allowFromMin2026}
           eventClick={handleEventClick}
@@ -342,6 +374,8 @@ export default function AppCalendar() {
           eventAllow={allowFromMin2026}
         />
       </div>
+
+      {useRemoteApi ? <ExportPanel disabled={remoteLoading} /> : null}
 
       {dialogOpen ? (
         <EventFormDialog
