@@ -58,3 +58,15 @@ export function exportRowsToSheetValues(rows: ExportRow[]): string[][] {
   const body = rows.map((r) => [r.date, r.startTime, r.endTime, r.title, r.memo]);
   return [header, ...body];
 }
+
+function escapeCsvField(value: string): string {
+  if (/[",\r\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+export function exportRowsToCsv(rows: ExportRow[]): string {
+  const values = exportRowsToSheetValues(rows);
+  return values.map((row) => row.map((field) => escapeCsvField(field)).join(",")).join("\r\n");
+}

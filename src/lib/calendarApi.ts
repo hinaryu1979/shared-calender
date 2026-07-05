@@ -106,3 +106,46 @@ export async function exportCalendarToSheets(
   if (!data.url) throw new Error("invalid_response");
   return { url: data.url, fileName: data.fileName };
 }
+
+export type ExportCsvResult = {
+  blob: Blob;
+  fileName: string;
+};
+
+export async function exportCalendarToCsv(
+  calendarId: string,
+  token: string,
+  params: ExportSheetsParams,
+): Promise<ExportCsvResult> {
+  const res = await fetch(`/api/calendars/${encodeURIComponent(calendarId)}/export`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      format: "csv",
+      startDate: params.startDate,
+      endDate: params.endDate,
+      fileName: params.fileName,
+    }),
+  });
+  if (!res.ok) {
+    const data = await parseJson<{ error?: string; message?: string }>(res);
+    throw new Error(data.message ?? data.error ?? res.statusText);
+  }
+  const headerName = res.headers.get("X-Export-Filename");
+  const fileName = headerName
+    ? decodeURIComponent(headerName)
+    : `${resolveCsvFallbackName(params)}.csv`;
+  const blob = await res.blob();
+  return { blob, fileName };
+}
+
+function resolveCsvFallbackName(params: ExportSheetsParams): string {
+  const name = params.fileName?.trim();
+  if (name) return name;
+  const s = params.startDate.replace(/-/g, "");
+  const e = params.endDate.replace(/-/g, "");
+  return `共有カレンダー_${s}_${e}`;
+}

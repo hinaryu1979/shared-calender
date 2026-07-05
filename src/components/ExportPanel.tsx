@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useId, useState } from "react";
-import { exportCalendarToSheets } from "@/lib/calendarApi";
+import { exportCalendarToCsv, exportCalendarToSheets } from "@/lib/calendarApi";
 import { formatDateLocal } from "@/lib/dateTimeLocal";
-import { CALENDAR_ID, EDIT_TOKEN } from "@/lib/publicCalendarConfig";
+import { CALENDAR_ID, EDIT_TOKEN, isSheetsExportEnabled } from "@/lib/publicCalendarConfig";
 
 const MOBILE_MQ = "(max-width: 767px)";
 
@@ -56,13 +56,27 @@ export function ExportPanel({ disabled = false }: Props) {
     }
     setLoading(true);
     try {
-      const result = await exportCalendarToSheets(CALENDAR_ID, EDIT_TOKEN, {
-        startDate,
-        endDate,
-        fileName: fileName.trim() || undefined,
-      });
-      setResultUrl(result.url);
-      setResultFileName(result.fileName);
+      const params = { startDate, endDate, fileName: fileName.trim() || undefined };
+      if (isSheetsExportEnabled) {
+        const result = await exportCalendarToSheets(CALENDAR_ID, EDIT_TOKEN, params);
+        setResultUrl(result.url);
+        setResultFileName(result.fileName);
+      } else {
+        const { blob, fileName: downloadName } = await exportCalendarToCsv(
+          CALENDAR_ID,
+          EDIT_TOKEN,
+          params,
+        );
+        const objectUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = objectUrl;
+        a.download = downloadName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(objectUrl);
+        setResultFileName(downloadName);
+      }
       if (window.matchMedia(MOBILE_MQ).matches) setOpen(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -126,9 +140,18 @@ export function ExportPanel({ disabled = false }: Props) {
               disabled={disabled || loading}
               className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-50"
             >
-              {loading ? "エクスポート中…" : "Googleスプレッドシートへエクスポート"}
+              {loading
+                ? "エクスポート中…"
+                : isSheetsExportEnabled
+                  ? "Googleスプレッドシートへエクスポート"
+                  : "CSVをダウンロード"}
             </button>
           </div>
+          {!isSheetsExportEnabled ? (
+            <p className="mt-2 text-xs text-zinc-500">
+              CSV形式で端末にダウンロードします（Google連携の設定は不要です）。
+            </p>
+          ) : null}
           {error ? <p className="mt-2 text-xs text-red-700">{error}</p> : null}
           {resultUrl ? (
             <p className="mt-2 text-xs text-zinc-700">
@@ -141,6 +164,10 @@ export function ExportPanel({ disabled = false }: Props) {
               >
                 {resultFileName ?? resultUrl}
               </a>
+            </p>
+          ) : !error && resultFileName ? (
+            <p className="mt-2 text-xs text-zinc-700">
+              ダウンロードしました: <span className="font-medium">{resultFileName}</span>
             </p>
           ) : null}
         </div>

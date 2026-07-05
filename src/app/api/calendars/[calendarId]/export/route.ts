@@ -2,8 +2,16 @@ import { type DocumentData } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 import type { CalendarEventRecord } from "@/lib/calendarEventTypes";
 import { authenticateCalendar } from "@/lib/calendarAuth";
-import { filterEventsByRange, isExportFormat, resolveExportFileName, runExport } from "@/lib/export";
+import {
+  eventsToExportRows,
+  exportRowsToCsv,
+  filterEventsByRange,
+  isExportFormat,
+  resolveExportFileName,
+  runExport,
+} from "@/lib/export";
 import { getAdminFirestore } from "@/lib/firebase-admin";
+import { isSheetsExportConfigured } from "@/lib/googleAuth";
 import type { ExportRequest } from "@/lib/export/types";
 
 export const runtime = "nodejs";
@@ -49,11 +57,33 @@ export async function POST(req: Request, ctx: { params: Promise<{ calendarId: st
       return jsonError(400, "validation_error", "開始日は終了日以前にしてください。");
     }
 
+    if (body.format === "sheets" && !isSheetsExportConfigured()) {
+      return jsonError(
+        409,
+        "sheets_not_configured",
+        "Googleスプレッドシート連携が未設定です。CSVダウンロードをご利用ください。",
+      );
+    }
+
     const db = getAdminFirestore();
     const snap = await db.collection("calendars").doc(calendarId).collection("events").get();
     const allEvents = snap.docs.map((d) => docToRecord(d.id, d.data()));
     const filtered = filterEventsByRange(allEvents, body.startDate, body.endDate);
     const fileName = resolveExportFileName(body.startDate, body.endDate, body.fileName);
+
+    if (body.format === "csv") {
+      const csv = exportRowsToCsv(eventsToExportRows(filtered));
+      const csvFileName = `${fileName}.csv`;
+      // Excel で文字化けしないよう UTF-8 BOM を付与
+      return new NextResponse(`\uFEFF${csv}`, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(csvFileName)}`,
+          "X-Export-Filename": encodeURIComponent(csvFileName),
+        },
+      });
+    }
 
     const result = await runExport(
       {

@@ -1,6 +1,6 @@
 import type { CalendarEventRecord } from "@/lib/calendarEventTypes";
 
-export type ExportFormat = "sheets";
+export type ExportFormat = "sheets" | "csv";
 
 export type ExportRow = {
   date: string;

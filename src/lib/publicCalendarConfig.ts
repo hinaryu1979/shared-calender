@@ -3,3 +3,6 @@ export const CALENDAR_ID = process.env.NEXT_PUBLIC_CALENDAR_ID ?? "";
 export const EDIT_TOKEN = process.env.NEXT_PUBLIC_EDIT_TOKEN ?? "";
 
 export const isFirebaseCalendarConfigured = Boolean(CALENDAR_ID && EDIT_TOKEN);
+
+/** Sheets エクスポートを UI に出すか（サーバーの設定と揃える公開フラグ） */
+export const isSheetsExportEnabled = process.env.NEXT_PUBLIC_SHEETS_EXPORT_ENABLED === "true";
