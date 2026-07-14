@@ -63,6 +63,15 @@ body {
   padding: 0.25rem 0.35rem;
 }
 
+/* 土日・日本の祝日 */
+.fc .fc-day-holiday {
+  background-color: #ffe4e6;
+}
+
+.fc .fc-timegrid-col.fc-day-holiday .fc-timegrid-col-bg {
+  background-color: #ffe4e6;
+}
+
 .fc .fc-event {
   border-radius: 0.25rem;
   border: 1px solid #bae6fd;

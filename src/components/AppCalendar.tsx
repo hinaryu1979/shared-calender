@@ -6,6 +6,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import jaLocale from "@fullcalendar/core/locales/ja";
+import { isHoliday } from "jp-holiday";
 import type {
   DateSelectArg,
   DateSpanApi,
@@ -46,6 +47,11 @@ const useRemoteApi = isFirebaseCalendarConfigured;
 function getInitialView(): "dayGridMonth" | "timeGridWeek" | "timeGridDay" {
   if (typeof window === "undefined") return "timeGridWeek";
   return window.matchMedia(MOBILE_MQ).matches ? "timeGridWeek" : "dayGridMonth";
+}
+
+function holidayClassNames({ date }: { date: Date }): string[] {
+  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+  return isWeekend || isHoliday(date) ? ["fc-day-holiday"] : [];
 }
 
 function initialSampleEvents(): CalendarEventRecord[] {
@@ -359,6 +365,8 @@ export default function AppCalendar() {
           }}
           events={fcEvents}
           eventClassNames={eventClassNames}
+          dayCellClassNames={holidayClassNames}
+          dayHeaderClassNames={holidayClassNames}
           dayMaxEventRows={3}
           selectable
           selectMirror
